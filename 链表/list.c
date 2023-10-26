@@ -1,8 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "list.h"
-
-
 void ListInit(List *plist)
 {
     /*
@@ -63,6 +59,7 @@ void ListPrint(List *plist)
     while (plistnode != NULL)
     {
         printf("%d\n", (int)plistnode->element);
+        plistnode = plistnode->pnext;
     }
     return;
 }
@@ -123,6 +120,7 @@ void ListLocateElem(List *plist, ElemType elem, ListNode **pplistnode)
             *pplistnode = pnode;
             return;
         }
+        pnode = pnode->pnext;
     }
     *pplistnode = NULL; // 未能查找到符合条件的节点
     return;
@@ -213,9 +211,11 @@ void ListInsert(List *plist, int n, ElemType elem)
             count++;
             if (pnode_1->pnext == NULL) // 如果pnode_1已是末尾，则补一个新的空节点
             {
-                pnode_1->pnext == (ListNode *)malloc(sizeof(ListNode));
+                
+                pnode_1->pnext = (ListNode *)malloc(sizeof(ListNode));
                 pnode_1->pnext->element = 0;
-                pnode_1->pnext = NULL;
+                pnode_1->pnext->pnext = NULL;
+                plist->length ++;
             }
             pnode_1 = pnode_1->pnext;
         }
@@ -253,7 +253,7 @@ void ListDelete(List *plist, int n)
     plist->length--;
     return;
 }
-void ListTraverse(List* plist,void (*Func)(ListNode*))
+void ListTraverse(List *plist, void (*Func)(ListNode *))
 {
     /*
         用函数Func遍历整个链表
@@ -264,10 +264,10 @@ void ListTraverse(List* plist,void (*Func)(ListNode*))
         }
         ListTraverse(&list,add2);
     */
-    if(ListGetLength(plist) == 0)
-    return;
-    ListNode* pnode = plist->head;
-    while(pnode != NULL)
+    if (ListGetLength(plist) == 0)
+        return;
+    ListNode *pnode = plist->head;
+    while (pnode != NULL)
     {
         Func(pnode);
         pnode = pnode->pnext;
