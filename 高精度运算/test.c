@@ -18,13 +18,19 @@ int main()
     //PreciseNumberPrint(&b);
     //PreciseNumberAdd(&c,&a,&b);
     //PreciseNumberMul(&c,&a,&b);
-    PreciseNumberInput10(&d1);
+    //乘法测试
+   // PreciseNumberInput10(&d1);
     //PreciseNumberInput10(&d2);
     //PreciseNumberMul10(&d3,d1,d2);
     //PreciseNumberPrint10(&d3);
+    //PreciseNumberInput10(&d3);
+    //进制转换
+    //PreciseNumber10toN(d3,18);
     //PreciseNumber10to2(&a,d);
     //PreciseNumberPrint2(&a);
-    //PreciseNumber10toN(d3,7);
+    
+    //多项式测试
+    PreciseNumberInput10(&d1);
     PreciseNumberPolynomial(d1);
     return 0;
 
