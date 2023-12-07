@@ -3,6 +3,8 @@
 //二叉树相关的实现代码 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stack>
+
 
 
 //定义存放数据的类型,假设是可以存放多个数据的结构体类型 
@@ -17,6 +19,14 @@ typedef struct tnode{
 	struct tnode *lchild;
 	struct tnode *rchild;
 } bNode;
+
+//声明
+void cPrintNode(bNode *a);
+bNode* TreeDeleteByValue(bNode *root,int value);
+void TreePathSearch(bNode *root,int id);
+void TreePathSearch(bNode *root,int id,std::stack<int>* stack_path_reverse);
+int TreeFindCommonAncestor(bNode *root,int id1,int id2);
+int TreeCalMaxSubMin(bNode *root);
 
 #include "showGT.h"  //展示树和图的API 
 
@@ -148,6 +158,7 @@ bNode *locateByID(bNode *root, int id){
 
 //采用后序遍历销毁树。思考：可以用先序遍历吗？ 
 void DestroyBTree(bNode *root){
+	if(root == NULL) return;
 	if (root->lchild) {DestroyBTree(root->lchild);root->lchild=NULL;}
 	if (root->rchild) {DestroyBTree(root->rchild);root->rchild=NULL;}
 	if (!root->lchild && !root->rchild) free(root);
@@ -296,14 +307,28 @@ int value0(bNode *root){
 }
 
 int main(){
-	int val[]={22,32,6,12,75,9,88,13,41,7,16,17};
-	int n = 12;
+	
+
+	int val[]={22,32,6,12,75,9,13,41,7,16,17};
+	int val2[] = {3,4,5,8,1,9,11,10,7,0};
+	int n = 11;
 	
 	printf("\n测试二叉树生成 value:");
 	bNode *t1 = buildBTreeByValue(val,n); //测试由值数组生成二叉树 
-	preTraverseTree(t1,add1); //测试先序遍历 
+	//preTraverseTree(t1,add1); //测试先序遍历 
 	inTraverseTree(t1,cPrintNode);  //测试中序遍历 
-	postTraverseTree(t1,cPrintNode);//测试后续遍历 
+	//postTraverseTree(t1,cPrintNode);//测试后续遍历 
+
+	//作业部分测试
+	printf("\n作业部分测试:\n");
+	//TreeDeleteByValue(t1,8);
+	TreePathSearch(t1,7);
+	int c = TreeFindCommonAncestor(t1,70,8);
+	printf("共同的祖先id = %d\n",c);
+	int d = TreeCalMaxSubMin(t1);
+	printf("max-min=%d\n",d);
+
+
 /*	DestroyBTree(t1);
 		
 	printf("\n测试二叉树生成 edge :");
@@ -358,14 +383,299 @@ int main(){
 	saveTree(t1,"sg.html"); 
 	
 	//典型应用测试
-	printf("\n树高度 %d ",deepth(t1)); 
-	printf("\n树度为2的结点数目 %d ",node2(t1)); 
-	printf("\n树度为0的结点数目 %d ",node0(t1)); 
-	printf("\n树度为1的结点数目 %d ",node1(t1));
-	printf("\n树度为0的结点value之和 %d ",value0(t1)); 
+	
+	// printf("\n树高度 %d ",deepth(t1)); 
+	// printf("\n树度为2的结点数目 %d ",node2(t1)); 
+	// printf("\n树度为0的结点数目 %d ",node0(t1)); 
+	// printf("\n树度为1的结点数目 %d ",node1(t1));
+	// printf("\n树度为0的结点value之和 %d ",value0(t1)); 
 	
 	DestroyBTree(t1);
 	return 1;
 }
-
+//以下四个函数是作业需要完成的部分
+bNode* TreeDeleteByValue(bNode *root,int value)
+{
+	/*
+		删除节点value=x 的节点及其子树
+	*/
+	if(root ==NULL)
+	return NULL;
+	if(root->data.value == value)//该节点自身需要删除
+	{
+		DestroyBTree(root->lchild);//该函数内部实现在老师的基础上做了修改，使之能接受空指针而不会出问题
+		DestroyBTree(root->rchild);
+		free(root);
+		return NULL;
+	}
+	else//该节点需要保留
+	{
+		root->lchild = TreeDeleteByValue(root->lchild,value);
+		root->rchild = TreeDeleteByValue(root->rchild,value);
+		return root;
+	}
+}
+int TreeFindCommonAncestor(bNode *root,int id1,int id2)
+{
+	std::stack<int> stack_path_reverse1;
+	std::stack<int> stack_path_reverse2;
+	TreePathSearch(root,id1,&stack_path_reverse1);
+	TreePathSearch(root,id2,&stack_path_reverse2);
+	if(stack_path_reverse1.size() == 0 || stack_path_reverse2.size() == 0)
+	return -1;//没有共同祖先
+	bNode* commonAncestor = root;
+	while(stack_path_reverse1.size() != 0 && stack_path_reverse2.size() != 0)
+	{
+		if(stack_path_reverse1.top() == stack_path_reverse2.top())//下一条路相同
+		{
+			if(stack_path_reverse1.top() == 0)
+			commonAncestor = commonAncestor->lchild;
+			else
+			commonAncestor = commonAncestor->rchild;
+			stack_path_reverse1.pop();
+			stack_path_reverse2.pop();
+		}
+		else//下一条路不同
+		{
+			break;
+		}
+	}
+	return (commonAncestor->data.id);
+}
+void TreePathSearch(bNode *root,int id)
+{
+	std::stack<int> stack_path;//已经走过的路径，0表示左走，1表示右走
+	std::stack<bNode*> stack_node;//前面的节点
+	if(root == NULL || root->data.id == id) return;
+	bNode * p = root;
+	int last_operation = 0;//0表示上次向下走，1代表上次从左分支向上走，2代表上次从右分支向上走
+	while(1)
+	{
+		if(p->data.id == id)//找到了目标节点，跳出循环
+			break;
+		if(last_operation == 0)//上次往下走，这次优先往左下走
+		{
+			if(p->lchild != NULL)//可以往下走
+			{
+				stack_path.push(0);
+				stack_node.push(p);
+				p = p->lchild;
+				last_operation = 0;
+			}
+			else if(p->rchild != NULL)//左边没路,往右下走
+			{
+				stack_path.push(1);
+				stack_node.push(p);
+				p = p->rchild;
+				last_operation = 0;
+			}
+			else//两边都走不了，往回走
+			{
+				if(stack_path.size() == 0)
+				{
+					break;//已经无法回头
+				}
+				if(stack_node.top()->lchild == p)
+				{
+					last_operation = 1;//从左侧返回
+				}
+				else
+				{
+					last_operation = 2;//从右侧返回
+				}
+				stack_path.pop();
+				p = stack_node.top();
+				stack_node.pop();
+			}
+		}
+		else if(last_operation == 1)//上次从左返回，这次尝试往右下走
+		{
+			if(p->rchild != NULL)//可以往右下走
+			{
+				stack_path.push(1);
+				stack_node.push(p);
+				p = p->rchild;
+				last_operation = 0;
+			}
+			else//只能往回走了
+			{
+				if(stack_path.size() == 0)
+				{
+					break;//已经无法回头
+				}
+				if(stack_node.top()->lchild == p)
+				{
+					last_operation = 1;//从左侧返回
+				}
+				else
+				{
+					last_operation = 2;//从右侧返回
+				}
+				stack_path.pop();
+				p = stack_node.top();
+				stack_node.pop();
+			}
+		}
+		else//last_operation==2,上次从右侧返回，这次只能返回
+		{
+			if(stack_path.size() == 0)
+				{
+					break;//已经无法回头
+				}
+				if(stack_node.top()->lchild == p)
+				{
+					last_operation = 1;//从左侧返回
+				}
+				else
+				{
+					last_operation = 2;//从右侧返回
+				}
+				stack_path.pop();
+				p = stack_node.top();
+				stack_node.pop();
+		}
+	}
+	//到此为止如果stack_path不是空的，说明中途退出了，找到了目标节点
+	std::stack<int> stack_path_reverse;
+	while(stack_path.size() != 0)//将栈倒过来方便输出
+	{
+		stack_path_reverse.push(stack_path.top());
+		stack_path.pop();
+	}
+	printf("路径为:");
+	while(stack_path_reverse.size() != 0)//输出
+	{
+		if(stack_path_reverse.top() == 0)
+		printf("左");
+		else
+		printf("右");
+		stack_path_reverse.pop();
+	}
+	printf("\n");
+}
+void TreePathSearch(bNode *root,int id,std::stack<int>* stack_path_reverse)
+{
+	//函数重载,将结果stack_path_reverse改为由外部输入，可以把结果带到函数外
+	std::stack<int> stack_path;//已经走过的路径，0表示左走，1表示右走
+	std::stack<bNode*> stack_node;//前面的节点
+	if(root == NULL || root->data.id == id) return;
+	bNode * p = root;
+	int last_operation = 0;//0表示上次向下走，1代表上次从左分支向上走，2代表上次从右分支向上走
+	while(1)
+	{
+		if(p->data.id == id)//找到了目标节点，跳出循环
+			break;
+		if(last_operation == 0)//上次往下走，这次优先往左下走
+		{
+			if(p->lchild != NULL)//可以往下走
+			{
+				stack_path.push(0);
+				stack_node.push(p);
+				p = p->lchild;
+				last_operation = 0;
+			}
+			else if(p->rchild != NULL)//左边没路,往右下走
+			{
+				stack_path.push(1);
+				stack_node.push(p);
+				p = p->rchild;
+				last_operation = 0;
+			}
+			else//两边都走不了，往回走
+			{
+				if(stack_path.size() == 0)
+				{
+					break;//已经无法回头
+				}
+				if(stack_node.top()->lchild == p)
+				{
+					last_operation = 1;//从左侧返回
+				}
+				else
+				{
+					last_operation = 2;//从右侧返回
+				}
+				stack_path.pop();
+				p = stack_node.top();
+				stack_node.pop();
+			}
+		}
+		else if(last_operation == 1)//上次从左返回，这次尝试往右下走
+		{
+			if(p->rchild != NULL)//可以往右下走
+			{
+				stack_path.push(1);
+				stack_node.push(p);
+				p = p->rchild;
+				last_operation = 0;
+			}
+			else//只能往回走了
+			{
+				if(stack_path.size() == 0)
+				{
+					break;//已经无法回头
+				}
+				if(stack_node.top()->lchild == p)
+				{
+					last_operation = 1;//从左侧返回
+				}
+				else
+				{
+					last_operation = 2;//从右侧返回
+				}
+				stack_path.pop();
+				p = stack_node.top();
+				stack_node.pop();
+			}
+		}
+		else//last_operation==2,上次从右侧返回，这次只能返回
+		{
+			if(stack_path.size() == 0)
+				{
+					break;//已经无法回头
+				}
+				if(stack_node.top()->lchild == p)
+				{
+					last_operation = 1;//从左侧返回
+				}
+				else
+				{
+					last_operation = 2;//从右侧返回
+				}
+				stack_path.pop();
+				p = stack_node.top();
+				stack_node.pop();
+		}
+	}
+	//到此为止如果stack_path不是空的，说明中途退出了，找到了目标节点
+	while(stack_path.size() != 0)//将栈倒过来方便输出
+	{
+		(*stack_path_reverse).push(stack_path.top());
+		stack_path.pop();
+	}
+	/*
+	printf("路径为:");
+	while(stack_path_reverse.size() != 0)//输出
+	{
+		if(stack_path_reverse.top() == 0)
+		printf("左");
+		else
+		printf("右");
+		stack_path_reverse.pop();
+	}
+	printf("\n");
+	*/
+}
+int TreeCalMaxSubMin(bNode *root)
+{ 
+	if(root ==  NULL)
+	return 0;
+	static int max = root->data.value;
+	static int min = root->data.value;
+	if(root->data.value > max) max = root->data.value;
+	if(root->data.value < min) min = root->data.value;
+	TreeCalMaxSubMin(root->lchild);
+	TreeCalMaxSubMin(root->rchild);
+	return (max - min);
+}
 #endif
